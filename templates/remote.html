@@ -1,0 +1,374 @@
+<head>
+    <title>Remote Control</title>
+</head>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+    html,
+    body {
+        touch-action: none;
+    }
+
+    html,
+    body,
+    * {
+        -webkit-user-select: none;
+        user-select: none;
+
+        -webkit-touch-callout: none;
+        /* disables Copy/Share popup on iOS */
+    }
+
+    html {
+        background: #e6ebef;
+    }
+
+    button {
+        touch-action: manipulation;
+    }
+
+    .ring-container {
+        position: absolute;
+        top: 25%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+
+    .ring {
+        z-index: 0;
+        pointer-events: none;
+        position: relative;
+
+        width: 300px;
+        height: 300px;
+
+        border-radius: 50%;
+        background: #e6ebef;
+
+        box-shadow:
+            20px 20px 40px rgba(200, 205, 209, 0.8),
+            -20px -20px 40px rgba(255, 255, 255, 0.9);
+    }
+
+    .ring::after {
+        z-index: 0;
+        pointer-events: none;
+        content: "";
+
+        position: absolute;
+
+        top: 70px;
+        left: 70px;
+
+        width: 160px;
+        height: 160px;
+
+        border-radius: 50%;
+        background: #e6ebef;
+
+        box-shadow:
+            inset 8px 8px 16px rgba(200, 205, 209, 0.25),
+            inset -8px -8px 16px rgba(255, 255, 255, 0.25);
+    }
+
+    .ringbuttons {
+        width: 200px;
+        height: 200px;
+        background-color: transparent;
+        border: none;
+        border-radius: 50%;
+        z-index: 998;
+        transition: 0.1s;
+    }
+
+    .ringbuttons:active {
+        color: #333;
+        box-shadow: inset 8px 8px 16px #c8cdd1, inset -8px -8px 16px #ffffff;
+    }
+
+    .ringbuttonsCenter {
+        width: 200px;
+        height: 200px;
+        background-color: transparent;
+        border: none;
+        border-radius: 50%;
+        z-index: 998;
+        transition: 0.1s;
+    }
+
+    .ringbuttonsCenter:active {
+        color: #333;
+        box-shadow: inset 8px 8px 16px #c8cdd1, inset -8px -8px 16px #ffffff;
+    }
+
+    .colombuttons {
+        width: 200px;
+        height: 200px;
+        color: #555;
+        box-shadow: 8px 8px 16px #c8cdd1, -8px -8px 16px #ffffff;
+        border: none;
+        border-radius: 50%;
+        z-index: 999;
+        transition: 0.2s;
+    }
+
+    .colombuttons:active {
+        box-shadow: inset 8px 8px 16px #c8cdd1, inset -8px -8px 16px #ffffff;
+        color: #333;
+    }
+
+    #touchpad {
+        width: 90%;
+        height: 80%;
+        color: #555;
+        box-shadow: 8px 8px 16px #c8cdd1, -8px -8px 16px #ffffff;
+        border-radius: 100px;
+    }
+
+    #touchpad:active {
+        box-shadow: inset 8px 8px 16px #c8cdd1, inset -8px -8px 16px #ffffff;
+        color: #333;
+    }
+
+    @keyframes restartspinner {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<body
+    style="display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; overflow: hidden;">
+    <div style="display: flex; height: 50%; width: 100%; align-items: center; justify-content: center;">
+        <button class="colombuttons" style="width: 50px; height: 50px; transform: translate(-50px, -800%);"
+            onclick="restart()"><i id="restarticon" style="width: 40px; height: 40px; color: rgb(20, 20, 20);"
+                data-lucide="refresh-ccw"></i></button>
+        <div id="light"
+            style="display: none; background-color: rgb(211, 49, 49); position: absolute; width: 30px; height: 8px; z-index: 999; transform: translateY(-22vh); filter: drop-shadow(0px 0px 10px red);">
+        </div>
+        <div class="ring-container">
+            <div class="ring" style="transform: scale(2);"></div>
+        </div>
+        <div style="position: absolute; transform: translateY(-200px); z-index: 201;">
+            <button class="ringbuttons" data-url="http://192.168.68.63:5000/up"></button>
+        </div>
+        <div style="position: absolute; transform: translateY(200px); z-index: 201;">
+            <button class="ringbuttons" data-url="http://192.168.68.63:5000/down"></button>
+        </div>
+        <div style="width: 60%; display: flex; align-items: center; justify-content: space-between; z-index: 10;">
+            <button class="ringbuttons" data-url="http://192.168.68.63:5000/left"></button>
+            <button class="ringbuttons" data-url="http://192.168.68.63:5000/right"></button>
+        </div>
+        <button class="ringbuttonsCenter" style="position: absolute;"
+            onclick="fetch('http://192.168.68.63:5000/OK')"></button>
+    </div>
+
+    <div
+        style="height: 50%; width: 100%; display: flex; align-items: center; justify-content: start; flex-direction: column; gap: 100px; pointer-events: none;">
+        <div style="height: 30%; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 50px; transform: translateY(-40%);">
+            <div style="display: flex; width: 60%; justify-content: space-between; padding-top: 200px; pointer-events: auto;">
+                <button class="colombuttons" onclick="fetch('http://192.168.68.63:5000/switch')"> <i
+                        style="width: 100px; height: 100px; color: rgb(20, 20, 20);"
+                        data-lucide="picture-in-picture-2"></i></button>
+                <button onclick="toggleCamera()" class="colombuttons"><i id="cameraIcon"
+                        style="width: 100px; height: 100px; color: rgb(20, 20, 20);" data-lucide="mic"></i></button>
+            </div>
+
+            <div style="display: flex; width: 60%; justify-content: space-between; pointer-events: auto;">
+                <button class="colombuttons" onclick="fetch('http://192.168.68.63:5000/Back')"><i
+                        style="width: 100px; height: 100px; color: rgb(20, 20, 20);" data-lucide="undo-2"></i></button>
+                <button class="colombuttons" onclick="fetch('http://192.168.68.63:5000/removeoverlay')"><i
+                        style="width: 100px; height: 100px; color: rgb(20, 20, 20);"
+                        data-lucide="image-off"></i></button>
+            </div>
+        </div>
+        <div style="height: 60%; width: 100%; display: flex; align-items: center; justify-content: center;">
+            <div id="touchpad" style="pointer-events: auto;"></div>
+        </div>
+
+
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+<script>
+    async function toggleCamera() {
+        await fetch('http://192.168.68.63:5000/record');
+
+        const response = await fetch('http://192.168.68.63:5000/icon');
+        const newicon = (await response.text()).trim();
+
+        const button = document.querySelector('[onclick="toggleCamera()"]');
+
+        button.innerHTML = `
+            <i id="cameraIcon"
+               style="width: 100px; height: 100px; color: rgb(20, 20, 20);"
+               data-lucide="${newicon}">
+            </i>
+        `;
+
+        lucide.createIcons();
+    }
+</script>
+
+<script>
+    document.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => {
+            document.getElementById('light').style.display = 'block';
+        });
+    });
+
+    setInterval(() => {
+        document.getElementById('light').style.display = 'none';
+    }, 100);
+
+</script>
+<script>
+    let holdInterval = null;
+
+    function startHolding(url) {
+        fetch(url); // immediate first press
+
+        holdInterval = setInterval(() => {
+            fetch(url);
+            document.getElementById('light').style.display = 'block';
+        }, 100); // repeat every 100ms
+    }
+
+    function stopHolding() {
+        clearInterval(holdInterval);
+        holdInterval = null;
+        document.getElementById('light').style.display = 'none';
+    }
+
+    document.querySelectorAll(".ringbuttons").forEach(button => {
+        const url = button.dataset.url;
+
+        button.addEventListener("pointerdown", e => {
+            e.preventDefault();
+
+            if (holdInterval) return;
+
+            startHolding(url);
+        });
+
+        button.addEventListener("pointerup", stopHolding);
+        button.addEventListener("pointerleave", stopHolding);
+        button.addEventListener("pointercancel", stopHolding);
+    });
+</script>
+<script>
+    var lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+        var now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+
+</script>
+<script>
+    async function restart() {
+        const icon = document.getElementById('restarticon');
+        icon.style.animation = 'restartspinner 1s linear infinite';
+        await fetch('http://192.168.68.63:5000/Restart')
+
+        async function fetchWithTimeout(url, timeout = 2000) {
+            const controller = new AbortController();
+
+            const timer = setTimeout(() => {
+                controller.abort();
+            }, timeout);
+
+            try {
+                return await fetch(url, {
+                    signal: controller.signal,
+                    cache: 'no-store'
+                });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function check_status() {
+            try {
+                const response = await fetchWithTimeout(
+                    'http://192.168.68.63:5000/Status_Restart'
+                );
+
+                const status = (await response.text()).trim();
+                if (status === "Clear") {
+                    icon.style.animation = '';
+                    return;
+                }
+            } catch {
+                // Server is offline waiting for restart
+            }
+
+            setTimeout(check_status, 1000);
+        }
+
+        check_status()
+    }
+</script>
+<script>
+    let mouseDown = false;
+    let lastX = 0;
+    let lastY = 0;
+    let moved = false;
+
+    const MOUSE_SPEED = 1.8;
+    const SERVER = "http://192.168.68.63:5000";
+
+    document.getElementById("touchpad").addEventListener("pointerdown", e => {
+        if (e.target.closest("button")) return;
+
+        e.preventDefault();
+        mouseDown = true;
+        moved = false;
+        lastX = e.clientX;
+        lastY = e.clientY;
+    });
+
+    document.getElementById("touchpad").addEventListener("pointermove", e => {
+        if (!mouseDown) return;
+
+        e.preventDefault();
+
+        const dx = (e.clientX - lastX) * MOUSE_SPEED;
+        const dy = (e.clientY - lastY) * MOUSE_SPEED;
+
+        lastX = e.clientX;
+        lastY = e.clientY;
+
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+            moved = true;
+            fetch(`${SERVER}/mouse_move?dx=${dx}&dy=${dy}`);
+        }
+    });
+
+    document.getElementById("touchpad").addEventListener("pointerup", e => {
+        if (!mouseDown) return;
+
+        e.preventDefault();
+        mouseDown = false;
+
+        // tap without drag = mouse click
+        if (!moved) {
+            fetch(`${SERVER}/mouse_click`);
+        }
+    });
+
+    document.getElementById("touchpad").addEventListener("pointercancel", () => {
+        mouseDown = false;
+    });
+</script>
