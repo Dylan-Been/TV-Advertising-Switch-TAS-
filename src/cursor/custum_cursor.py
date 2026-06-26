@@ -1,12 +1,13 @@
 import ctypes
 import time
 import os
-import pygame
 import win32gui
 import win32api
 import win32con
 import pyautogui
-import threading
+import subprocess
+import traceback
+import sys
 
 from PIL import Image
 import ctypes
