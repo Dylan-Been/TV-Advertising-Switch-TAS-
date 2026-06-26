@@ -4,17 +4,17 @@ Copyright (c) 2026 Dylan Been
 
 Licensed under the MIT License. See the LICENSE file for details.
 
-The Ad Skipper is a Windows tool for controlling Ziggo Go and YouTube TV from a phone or tablet on the same network. It starts a local Flask remote, opens the browser windows, listens to Ziggo audio with Vosk speech recognition, and automatically switches between Ziggo and YouTube when Dutch ad-break phrases are detected.
+The Ad Skipper is a Windows tool for controlling a streaming app and YouTube TV from a phone or tablet on the same network. It is tested with Ziggo Go as the main streaming app, but another app or website can be used if you update the startup URL, window title matching, audio routing, and detection phrases. It starts a local Flask remote, opens the browser windows, listens to streaming audio with Vosk speech recognition, and automatically switches between the streaming app and YouTube when ad-break phrases are detected.
 
 ## Features
 
 - Serves a remote control at `http://<computer-ip>:5000/`.
 - Shows a startup page with a QR code for the current device IP.
-- Opens YouTube TV in Chrome and Ziggo Go in Microsoft Edge.
+- Opens YouTube TV in Chrome and the configured streaming app in Microsoft Edge.
 - Sends keyboard and mouse input to the active player.
 - Uses a touchpad area in the remote for mouse movement and clicks.
-- Switches from Ziggo to YouTube when an ad break is detected.
-- Switches back to Ziggo when the program resumes.
+- Switches from the configured streaming app to YouTube when an ad break is detected.
+- Switches back to the configured streaming app when the program resumes.
 - Lets you pause or resume automatic switching from the remote.
 - Can restart the running program from the remote.
 
@@ -27,7 +27,7 @@ You need:
 - Python 3.13.3. This is the version the project was tested with.
 - Google Chrome installed at `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 - Microsoft Edge installed at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
-- VB-CABLE installed so Ziggo audio can be captured by the transcription service while you still hear it through your speakers.
+- VB-CABLE installed so streaming-app audio can be captured by the transcription service while you still hear it through your speakers.
 - The Dutch Vosk model folder `models/vosk-model-small-nl-0.22`.
 - Windows firewall access for Python if you want to open the remote from another device.
 
@@ -149,14 +149,14 @@ python -m sounddevice
 
 VB-CABLE creates two Windows audio devices:
 
-- `CABLE Input` is the playback device. Send Edge/Ziggo audio into this device.
+- `CABLE Input` is the playback device. Send Edge/streaming-app audio into this device.
 - `CABLE Output` is the recording device. The Ad Skipper listens to this device for transcription.
 
-To make this work, Edge should play Ziggo audio into `CABLE Input`, and Windows should listen to `CABLE Output` through your real speakers or TV. That gives the app a clean audio feed while you can still hear Ziggo normally.
+To make this work, Edge should play the streaming-app audio into `CABLE Input`, and Windows should listen to `CABLE Output` through your real speakers or TV. That gives the app a clean audio feed while you can still hear the stream normally.
 
 ### Route Edge Audio To VB-CABLE
 
-1. Start playing Ziggo Go in Microsoft Edge.
+1. Start playing Ziggo Go, or your chosen streaming app, in Microsoft Edge.
 2. Open Windows Settings.
 3. Go to `System` > `Sound` > `Volume mixer`.
 4. Find `Microsoft Edge` in the apps list.
@@ -178,10 +178,24 @@ If Edge does not appear in the Volume mixer yet, play audio in Edge and reopen t
 
 After this setup:
 
-- Edge sends Ziggo audio to `CABLE Input`.
+- Edge sends streaming-app audio to `CABLE Input`.
 - VB-CABLE exposes that audio as `CABLE Output`.
 - The Ad Skipper records from `CABLE Output`.
 - Windows plays `CABLE Output` back through your real speakers or TV.
+
+## Using Another Streaming App
+
+Ziggo Go is the tested default, but the same setup can be adapted for another streaming app or website. The important part is that the app plays audio through Microsoft Edge, because the startup flow, audio routing instructions, and switching helpers are built around Edge for the main streaming app.
+
+To replace Ziggo with another app, update the Ziggo-specific values and helpers:
+
+- In `src/startup.py`, change `ZIGGO_URL` to the website you want to open.
+- In `src/actions/switch.py`, update the window title checks that look for `Ziggo`.
+- In `src/app.py`, update routes or behavior that check whether the current state is `ziggo`.
+- In `src/services/audio_transcription.py`, update the phrases used to detect ad breaks and content returning.
+- In Windows Volume mixer, route Edge audio to `CABLE Input` for the app you are using.
+
+The `/removeoverlay` route is also app-specific. It currently clicks a fixed screen position to remove a YouTube overlay. If your chosen app does not have a similar overlay, or if the click position does not make sense for that app, remove the overlay button from `templates/remote.html` or change the `/removeoverlay` behavior in `src/app.py`.
 
 ## Running
 
@@ -206,7 +220,7 @@ On startup, the program will:
 5. Start the audio transcription thread.
 6. Open the startup QR page in Chrome.
 7. Open YouTube TV in Chrome.
-8. Open Ziggo Go in Microsoft Edge.
+8. Open Ziggo Go, or the configured streaming app, in Microsoft Edge.
 9. Focus and maximize the browser windows.
 10. Mark the process state as clear.
 
@@ -226,12 +240,12 @@ The startup page shows a QR code for the detected URL.
 | `/startup` | Opens the startup QR page |
 | `/up` | Presses Arrow Up |
 | `/down` | Presses Arrow Down |
-| `/left` | Presses Arrow Left, or Shift+Tab while Ziggo is active |
-| `/right` | Presses Arrow Right, or Tab while Ziggo is active |
+| `/left` | Presses Arrow Left, or Shift+Tab while the streaming app is active |
+| `/right` | Presses Arrow Right, or Tab while the streaming app is active |
 | `/OK` | Presses Enter when the process state is clear |
 | `/Back` | Presses Escape when the process state is clear |
-| `/switch` | Toggles between Ziggo and YouTube |
-| `/removeoverlay` | Clicks to remove the YouTube overlay |
+| `/switch` | Toggles between the streaming app and YouTube |
+| `/removeoverlay` | Clicks a fixed overlay-removal position; remove or change this if your app does not need it |
 | `/record` | Pauses or resumes automatic switching |
 | `/icon` | Returns the current microphone icon name |
 | `/Restart` | Restarts the running program |
@@ -239,30 +253,36 @@ The startup page shows a QR code for the detected URL.
 | `/mouse_move` | Moves the mouse cursor and scrolls near vertical screen edges |
 | `/mouse_click` | Clicks the left mouse button |
 | `/youtube` | Switches directly to YouTube |
-| `/ziggo` | Switches directly to Ziggo |
+| `/ziggo` | Switches directly to the configured streaming app; Ziggo is the default state name in code |
 
 ## Automatic Switching
 
-`src/services/audio_transcription.py` listens to the VB-CABLE input and transcribes Dutch audio with Vosk.
+`src/services/audio_transcription.py` listens to the VB-CABLE input and transcribes Dutch audio with Vosk. The default phrases are written for Ziggo Go, but they can be changed for another app or language.
 
-It switches from Ziggo to YouTube when it detects phrases such as:
+It switches from the streaming app to YouTube when it detects phrases such as:
 
 - `reclame`
 - `tot zo`
 - `we zijn zo terug`
 
-It switches from YouTube back to Ziggo when it detects phrases such as:
+It switches from YouTube back to the streaming app when it detects phrases such as:
 
 - `welkom terug`
 - `we zijn terug`
 
 Automatic switching can be paused or resumed with the microphone button in the remote.
 
+## Future Updates And Ideas
+
+The current ad detection uses simple phrase matching on the transcribed audio. A future improvement is local AI-based ad detection with a local LLM, which should make ad detection more accurate and less dependent on fixed phrases.
+
+Suggestions, improvements, and ideas are welcome. If you notice a better way to detect ads, route audio, support more streaming apps, improve the remote UI, or make setup easier, I would be glad to hear it.
+
 ## Notes
 
 - Keep the computer awake while the tool is running.
 - The phone or tablet remote must be on the same network as the computer.
-- Browser window titles must include `YouTube` and `Ziggo` so the switching helpers can find them.
+- Browser window titles must match the names used by the switching helpers. By default, those are `YouTube` and `Ziggo`.
 - Some actions use screen coordinates, so display scaling or browser layout changes may require coordinate adjustments in `src/app.py` or `src/actions/switch.py`.
 - The startup QR code is generated from the detected local IP.
 
@@ -282,8 +302,8 @@ If the QR code opens the wrong address:
 
 If switching does not work:
 
-- Confirm Chrome and Edge are open with YouTube TV and Ziggo Go.
-- Confirm the window titles contain `YouTube` and `Ziggo`.
+- Confirm Chrome and Edge are open with YouTube TV and the configured streaming app.
+- Confirm the window titles match the names used by the switching helpers. By default, those are `YouTube` and `Ziggo`.
 - Open `/Status_Restart` and check whether the process state is stuck.
 
 If transcription does not work:
