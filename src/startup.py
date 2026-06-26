@@ -9,9 +9,9 @@ from src.cursor.cursor_behavior import cursor_auto_hide
 from src.services.audio_transcription import start_transcription
 import threading
 from src.states.procces_status import switch_proccesstate
-import win32gui
 import pyautogui
 from src.cursor.custum_cursor import safe_cursor_loop, hide_normal_cursor
+from src.services.network import get_server_url
 import traceback
 
 # directing to the browser that needs to be opened  
@@ -80,10 +80,12 @@ def close_apps():
 
 #opening the desired web pages in chrome and edge 
 def open_apps():
+    startup_url = f"{get_server_url()}/startup"
+
     subprocess.Popen([
     CHROME_PATH,
     "--kiosk",
-    "http://192.168.68.63:5000/startup",
+    startup_url,
     "--new-window",
     "--disable-session-crashed-bubble",
     "--disable-infobars",
@@ -153,12 +155,23 @@ if __name__ == "__main__":
         close_apps()
         pyautogui.FAILSAFE = False
         hide_normal_cursor()
-
+        
         threading.Thread(target=safe_cursor_loop,daemon=True).start()
         threading.Thread(target=cursor_auto_hide, daemon=True).start()
         threading.Thread(target=start_apps, daemon=True).start()
+        print("remote access url:", get_server_url())
         threading.Thread(target=start_transcription, daemon=True).start()
         time.sleep(3)
+        startup_url = f"{get_server_url()}/startup"
+
+        subprocess.Popen([
+        CHROME_PATH,
+        "--kiosk",
+        startup_url,
+        "--new-window",
+        "--disable-session-crashed-bubble",
+        "--disable-infobars",
+        ])
         open_apps()
         print("Startup done")
         switch_proccesstate(False)

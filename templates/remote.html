@@ -154,24 +154,24 @@
             <div class="ring" style="transform: scale(2);"></div>
         </div>
         <div style="position: absolute; transform: translateY(-200px); z-index: 201;">
-            <button class="ringbuttons" data-url="http://192.168.68.63:5000/up"></button>
+            <button class="ringbuttons" data-url="/up"></button>
         </div>
         <div style="position: absolute; transform: translateY(200px); z-index: 201;">
-            <button class="ringbuttons" data-url="http://192.168.68.63:5000/down"></button>
+            <button class="ringbuttons" data-url="/down"></button>
         </div>
         <div style="width: 60%; display: flex; align-items: center; justify-content: space-between; z-index: 10;">
-            <button class="ringbuttons" data-url="http://192.168.68.63:5000/left"></button>
-            <button class="ringbuttons" data-url="http://192.168.68.63:5000/right"></button>
+            <button class="ringbuttons" data-url="/left"></button>
+            <button class="ringbuttons" data-url="/right"></button>
         </div>
         <button class="ringbuttonsCenter" style="position: absolute;"
-            onclick="fetch('http://192.168.68.63:5000/OK')"></button>
+            onclick="fetch(apiUrl('/OK'))"></button>
     </div>
 
     <div
         style="height: 50%; width: 100%; display: flex; align-items: center; justify-content: start; flex-direction: column; gap: 100px; pointer-events: none;">
         <div style="height: 30%; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 50px; transform: translateY(-40%);">
             <div style="display: flex; width: 60%; justify-content: space-between; padding-top: 200px; pointer-events: auto;">
-                <button class="colombuttons" onclick="fetch('http://192.168.68.63:5000/switch')"> <i
+                <button class="colombuttons" onclick="fetch(apiUrl('/switch'))"> <i
                         style="width: 100px; height: 100px; color: rgb(20, 20, 20);"
                         data-lucide="picture-in-picture-2"></i></button>
                 <button onclick="toggleCamera()" class="colombuttons"><i id="cameraIcon"
@@ -179,9 +179,9 @@
             </div>
 
             <div style="display: flex; width: 60%; justify-content: space-between; pointer-events: auto;">
-                <button class="colombuttons" onclick="fetch('http://192.168.68.63:5000/Back')"><i
+                <button class="colombuttons" onclick="fetch(apiUrl('/Back'))"><i
                         style="width: 100px; height: 100px; color: rgb(20, 20, 20);" data-lucide="undo-2"></i></button>
-                <button class="colombuttons" onclick="fetch('http://192.168.68.63:5000/removeoverlay')"><i
+                <button class="colombuttons" onclick="fetch(apiUrl('/removeoverlay'))"><i
                         style="width: 100px; height: 100px; color: rgb(20, 20, 20);"
                         data-lucide="image-off"></i></button>
             </div>
@@ -200,10 +200,17 @@
     </script>
 </body>
 <script>
-    async function toggleCamera() {
-        await fetch('http://192.168.68.63:5000/record');
+    const SERVER = window.location.origin;
 
-        const response = await fetch('http://192.168.68.63:5000/icon');
+    function apiUrl(path) {
+        return `${SERVER}${path}`;
+    }
+</script>
+<script>
+    async function toggleCamera() {
+        await fetch(apiUrl('/record'));
+
+        const response = await fetch(apiUrl('/icon'));
         const newicon = (await response.text()).trim();
 
         const button = document.querySelector('[onclick="toggleCamera()"]');
@@ -280,7 +287,7 @@
     async function restart() {
         const icon = document.getElementById('restarticon');
         icon.style.animation = 'restartspinner 1s linear infinite';
-        await fetch('http://192.168.68.63:5000/Restart')
+        await fetch(apiUrl('/Restart'))
 
         async function fetchWithTimeout(url, timeout = 2000) {
             const controller = new AbortController();
@@ -302,7 +309,7 @@
         async function check_status() {
             try {
                 const response = await fetchWithTimeout(
-                    'http://192.168.68.63:5000/Status_Restart'
+                    apiUrl('/Status_Restart')
                 );
 
                 const status = (await response.text()).trim();
@@ -327,7 +334,6 @@
     let moved = false;
 
     const MOUSE_SPEED = 1.8;
-    const SERVER = "http://192.168.68.63:5000";
 
     document.getElementById("touchpad").addEventListener("pointerdown", e => {
         if (e.target.closest("button")) return;

@@ -2,92 +2,213 @@
 
 Copyright (c) 2026 Dylan Been
 
-Licensed under the GNU General Public License v3.0.
-See the LICENSE file for details.
+Licensed under the MIT License. See the LICENSE file for details.
 
-TheAdSkipper is a Windows-based remote control and automatic switching tool for watching Ziggo and YouTube TV from the same machine. It starts a local Flask remote, opens the required browser windows, listens to Ziggo audio with Vosk speech recognition, and switches between Ziggo and YouTube when Dutch ad-break transition phrases are detected.
+The Ad Skipper is a Windows tool for controlling Ziggo Go and YouTube TV from a phone or tablet on the same network. It starts a local Flask remote, opens the browser windows, listens to Ziggo audio with Vosk speech recognition, and automatically switches between Ziggo and YouTube when Dutch ad-break phrases are detected.
 
-## What It Does
+## Features
 
-- Serves a browser remote control at `http://<your-ip>:5000/`.
+- Serves a remote control at `http://<computer-ip>:5000/`.
+- Shows a startup page with a QR code for the current device IP.
 - Opens YouTube TV in Chrome and Ziggo Go in Microsoft Edge.
 - Sends keyboard and mouse input to the active player.
+- Uses a touchpad area in the remote for mouse movement and clicks.
 - Switches from Ziggo to YouTube when an ad break is detected.
 - Switches back to Ziggo when the program resumes.
-- Can pause automatic recording/switch detection from the remote.
+- Lets you pause or resume automatic switching from the remote.
 - Can restart the running program from the remote.
-
-## Project Structure
-
-```text
-.
-|-- app.py                  # Flask server and remote-control routes
-|-- startup.py              # Main launcher for the server, transcription, and browsers
-|-- audio_transcription.py  # Vosk microphone transcription and phrase detection
-|-- switch.py               # Window focus, scaling, overlay, and audio mute helpers
-|-- app_state.py            # Tracks whether Ziggo or YouTube is active
-|-- stop_flag_state.py      # Tracks whether automatic switching is paused
-|-- procces_status.py       # Tracks whether a switch/startup process is busy
-|-- restart.py              # Restarts the Python program
-|-- remote.html             # Main remote-control UI
-|-- startup.html            # Startup screen
-|-- static/                 # Static files used by the HTML pages
-`-- Vosk models/            # Local speech recognition model folder
-```
 
 ## Requirements
 
-This project is built for Windows because it depends on Windows window handles, browser automation, and per-application audio control.
+This project is built for Windows. It depends on Windows window handles, browser automation, a virtual audio cable, and per-application audio control.
 
-Install Python dependencies:
+You need:
+
+- Python 3.13.3. This is the version the project was tested with.
+- Google Chrome installed at `C:\Program Files\Google\Chrome\Application\chrome.exe`.
+- Microsoft Edge installed at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
+- VB-CABLE installed so Ziggo audio can be captured by the transcription service while you still hear it through your speakers.
+- The Dutch Vosk model folder `models/vosk-model-small-nl-0.22`.
+- Windows firewall access for Python if you want to open the remote from another device.
+
+Tested hardware:
+
+| Component | Tested setup |
+| --- | --- |
+| CPU | Intel Core i5-7500T |
+| RAM | 8 GB |
+| OS | Windows |
+| Network | Phone/tablet and computer on the same local network |
+| Audio | VB-CABLE virtual audio device |
+
+Recommended minimum hardware:
+
+- Intel Core i5-class CPU or similar.
+- 8 GB RAM.
+- Stable local network connection.
+- Audio output device such as speakers, headphones, HDMI TV, or default Windows playback device.
+
+Install the Python packages:
 
 ```powershell
-pip install flask pyautogui pydirectinput pywin32 pygetwindow psutil vosk sounddevice requests pycaw comtypes
+pip install flask pyautogui pydirectinput pywin32 pygetwindow psutil vosk sounddevice requests pycaw comtypes pygame pillow
 ```
 
-You also need:
+Tested install versions:
 
-- Google Chrome installed at `C:\Program Files\Google\Chrome\Application\chrome.exe`
-- Microsoft Edge installed at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
-- A Dutch Vosk model, such as `vosk-model-small-nl-0.22`
-- A working audio input device that captures the Ziggo audio
+| Tool or package | Tested version |
+| --- | --- |
+| Python | 3.13.3 |
+| Flask | 1.1.2 |
+| PyAutoGUI | 0.9.54 |
+| PyDirectInput | 1.0.4 |
+| pywin32 | 311 |
+| PyGetWindow | 0.0.9 |
+| psutil | 7.1.3 |
+| vosk | 0.3.45 |
+| sounddevice | 0.5.5 |
+| requests | 2.32.5 |
+| pycaw | 20251023 |
+| comtypes | 1.4.16 |
+| pygame | 2.6.1 |
+| pillow | 11.3.0 |
 
-## Configuration
+VB-CABLE is available from:
 
-Before running, check the hard-coded machine-specific values:
+```text
+https://vb-audio.com/Cable/index.htm
+```
 
-- In `startup.py`, update `CHROME_PATH` and `EDGE_PATH` if your browsers are installed somewhere else.
-- In `startup.py`, update the IP address used for the startup page:
+## Project Layout
+
+```text
+.
+|-- README.md
+|-- scripts/
+|   `-- tas.bat
+|-- src/
+|   |-- app.py                         # Flask routes and remote-control actions
+|   |-- startup.py                     # Main launcher
+|   |-- actions/
+|   |   |-- restart.py                 # Program restart helper
+|   |   `-- switch.py                  # Browser focus, switching, and audio mute helpers
+|   |-- cursor/
+|   |   |-- cursor_behavior.py         # Cursor auto-hide behavior
+|   |   `-- custum_cursor.py           # Custom cursor overlay
+|   |-- services/
+|   |   |-- audio_transcription.py     # Vosk transcription and ad phrase detection
+|   |   `-- network.py                 # Current-device IP detection
+|   `-- states/
+|       |-- app_state.py               # Current app state
+|       |-- procces_status.py          # Busy or clear process state
+|       `-- stop_flag_state.py         # Automatic switching pause state
+|-- static/
+|-- templates/
+|   |-- remote.html                    # Phone/tablet remote UI
+|   `-- startup.html                   # QR startup screen
+`-- models/
+    `-- vosk-model-small-nl-0.22/
+```
+
+## Setup
+
+1. Install the Python packages from the Requirements section.
+2. Install VB-CABLE.
+3. Make sure the Dutch Vosk model exists at:
+
+```text
+models/vosk-model-small-nl-0.22
+```
+
+4. Configure VB-CABLE as described below.
+5. Check browser paths in `src/startup.py` if Chrome or Edge are installed somewhere else:
 
 ```python
-"http://192.168.68.61:5000/startup"
+EDGE_PATH = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 ```
 
-- In `audio_transcription.py`, update `MODEL_PATH` to point to your local Vosk model.
-- In `audio_transcription.py`, update `DEVICE` to the correct input device number for your machine.
+You do not need to hard-code the computer IP. The app detects the current device IP when it starts.
 
-To find available audio devices, you can run:
+You usually do not need to hard-code the audio input device either. The transcription service searches for an input device containing `cable output` or `vb-audio`.
+
+If auto-detection picks the wrong audio device, set an override before starting:
+
+```powershell
+$env:ADSKIPPER_AUDIO_DEVICE="18"
+python -m src.startup
+```
+
+To list audio devices:
 
 ```powershell
 python -m sounddevice
 ```
 
-## Running The Project
+## Configure VB-CABLE
 
-Start the full application with:
+VB-CABLE creates two Windows audio devices:
+
+- `CABLE Input` is the playback device. Send Edge/Ziggo audio into this device.
+- `CABLE Output` is the recording device. The Ad Skipper listens to this device for transcription.
+
+To make this work, Edge should play Ziggo audio into `CABLE Input`, and Windows should listen to `CABLE Output` through your real speakers or TV. That gives the app a clean audio feed while you can still hear Ziggo normally.
+
+### Route Edge Audio To VB-CABLE
+
+1. Start playing Ziggo Go in Microsoft Edge.
+2. Open Windows Settings.
+3. Go to `System` > `Sound` > `Volume mixer`.
+4. Find `Microsoft Edge` in the apps list.
+5. Set the Edge output device to `CABLE Input (VB-Audio Virtual Cable)`.
+
+If Edge does not appear in the Volume mixer yet, play audio in Edge and reopen the Volume mixer.
+
+### Listen To VB-CABLE Through Speakers
+
+1. Open Windows Settings.
+2. Go to `System` > `Sound` > `More sound settings`.
+3. Open the `Recording` tab.
+4. Select `CABLE Output (VB-Audio Virtual Cable)`.
+5. Click `Properties`.
+6. Open the `Listen` tab.
+7. Enable `Listen to this device`.
+8. In `Playback through this device`, choose your real speakers, headphones, HDMI TV, or default playback device.
+9. Click `Apply`, then `OK`.
+
+After this setup:
+
+- Edge sends Ziggo audio to `CABLE Input`.
+- VB-CABLE exposes that audio as `CABLE Output`.
+- The Ad Skipper records from `CABLE Output`.
+- Windows plays `CABLE Output` back through your real speakers or TV.
+
+## Running
+
+Start the full application from the project root:
 
 ```powershell
-python startup.py
+python -m src.startup
 ```
 
-This will:
+Or use the batch file:
 
-1. Start the Flask remote server on port `5000`.
-2. Start the transcription thread.
-3. Close selected apps such as Chrome, Edge, Firefox, Spotify, Discord, Steam, Notepad, and VLC.
-4. Open the startup page, YouTube TV, and Ziggo Go.
-5. Focus and maximize the browser windows.
-6. Begin listening for transition phrases.
+```powershell
+.\scripts\tas.bat
+```
+
+On startup, the program will:
+
+1. Mark the process state as busy.
+2. Close selected apps such as Chrome, Edge, Firefox, Spotify, Discord, Steam, Notepad, and VLC.
+3. Start the Flask remote server on port `5000`.
+4. Start the custom cursor helpers.
+5. Start the audio transcription thread.
+6. Open the startup QR page in Chrome.
+7. Open YouTube TV in Chrome.
+8. Open Ziggo Go in Microsoft Edge.
+9. Focus and maximize the browser windows.
+10. Mark the process state as clear.
 
 Open the remote from another device on the same network:
 
@@ -95,67 +216,81 @@ Open the remote from another device on the same network:
 http://<computer-ip>:5000/
 ```
 
-For example:
-
-```text
-http://192.168.68.61:5000/
-```
+The startup page shows a QR code for the detected URL.
 
 ## Remote Routes
-
-The Flask app exposes these routes:
 
 | Route | Action |
 | --- | --- |
 | `/` | Opens the main remote UI |
-| `/startup` | Opens the startup screen |
-| `/up` | Presses arrow up |
-| `/down` | Presses arrow down |
-| `/left` | Navigates left, or Shift+Tab while in Ziggo |
-| `/right` | Navigates right, or Tab while in Ziggo |
-| `/OK` | Presses Enter when no process is busy |
-| `/Back` | Presses Escape when no process is busy |
+| `/startup` | Opens the startup QR page |
+| `/up` | Presses Arrow Up |
+| `/down` | Presses Arrow Down |
+| `/left` | Presses Arrow Left, or Shift+Tab while Ziggo is active |
+| `/right` | Presses Arrow Right, or Tab while Ziggo is active |
+| `/OK` | Presses Enter when the process state is clear |
+| `/Back` | Presses Escape when the process state is clear |
 | `/switch` | Toggles between Ziggo and YouTube |
-| `/Scale` | Toggles fullscreen/scaling for the active player |
-| `/record` | Toggles automatic switching pause/resume |
-| `/icon` | Returns the current record icon state |
-| `/Restart` | Restarts the program |
-| `/Status_Restart` | Returns the current process status |
+| `/removeoverlay` | Clicks to remove the YouTube overlay |
+| `/record` | Pauses or resumes automatic switching |
+| `/icon` | Returns the current microphone icon name |
+| `/Restart` | Restarts the running program |
+| `/Status_Restart` | Returns the current process state |
+| `/mouse_move` | Moves the mouse cursor and scrolls near vertical screen edges |
+| `/mouse_click` | Clicks the left mouse button |
 | `/youtube` | Switches directly to YouTube |
 | `/ziggo` | Switches directly to Ziggo |
 
 ## Automatic Switching
 
-`audio_transcription.py` listens to the configured audio input and transcribes Dutch speech with Vosk. It watches for simple transition phrases:
+`src/services/audio_transcription.py` listens to the VB-CABLE input and transcribes Dutch audio with Vosk.
 
-- Switch to YouTube when Ziggo says phrases like `reclame`, `tot zo`, or `we zijn zo terug`.
-- Switch back to Ziggo when it hears phrases like `welkom terug` or `we zijn terug`.
+It switches from Ziggo to YouTube when it detects phrases such as:
 
-The automatic switching can be paused or resumed with the remote's record control.
+- `reclame`
+- `tot zo`
+- `we zijn zo terug`
+
+It switches from YouTube back to Ziggo when it detects phrases such as:
+
+- `welkom terug`
+- `we zijn terug`
+
+Automatic switching can be paused or resumed with the microphone button in the remote.
 
 ## Notes
 
 - Keep the computer awake while the tool is running.
-- Make sure Windows allows Python through the firewall if you want to access the remote from another device.
-- Browser window titles must include `YouTube` and `Ziggo` for the window switching helpers to find them.
-- The app uses screen coordinates for some Ziggo controls, so browser layout or display scaling changes may require small coordinate adjustments in `switch.py` or `app.py`.
+- The phone or tablet remote must be on the same network as the computer.
+- Browser window titles must include `YouTube` and `Ziggo` so the switching helpers can find them.
+- Some actions use screen coordinates, so display scaling or browser layout changes may require coordinate adjustments in `src/app.py` or `src/actions/switch.py`.
+- The startup QR code is generated from the detected local IP.
 
 ## Troubleshooting
 
 If the remote does not load:
 
-- Confirm `python startup.py` is still running.
-- Check that port `5000` is not blocked.
-- Use the computer's local network IP address, not `localhost`, from another device.
+- Confirm the program is running with `python -m src.startup` or `.\scripts\tas.bat`.
+- Confirm Windows firewall allows Python on the local network.
+- Confirm port `5000` is not blocked or already in use.
+- Use the computer's local network IP from another device, not `localhost`.
+
+If the QR code opens the wrong address:
+
+- Make sure the computer is connected to the same network as the phone or tablet.
+- Restart the app after changing Wi-Fi or Ethernet networks.
 
 If switching does not work:
 
-- Confirm Chrome and Edge are open with YouTube and Ziggo.
+- Confirm Chrome and Edge are open with YouTube TV and Ziggo Go.
 - Confirm the window titles contain `YouTube` and `Ziggo`.
-- Check whether the process state is stuck by opening `/Status_Restart`.
+- Open `/Status_Restart` and check whether the process state is stuck.
 
 If transcription does not work:
 
-- Confirm `MODEL_PATH` points to the Vosk model folder.
-- Confirm `DEVICE` matches the correct audio input.
-- Run `python -m sounddevice` to inspect available devices.
+- Confirm VB-CABLE is installed.
+- Confirm Edge output is set to `CABLE Input (VB-Audio Virtual Cable)` in Windows Volume mixer.
+- Confirm `CABLE Output (VB-Audio Virtual Cable)` has `Listen to this device` enabled.
+- Confirm the Vosk model folder exists at `models/vosk-model-small-nl-0.22`.
+- Run `python -m sounddevice` and check whether a `CABLE Output` or `VB-Audio` input device appears.
+- Set `ADSKIPPER_AUDIO_DEVICE` if auto-detection finds the wrong device.

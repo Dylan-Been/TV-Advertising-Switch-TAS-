@@ -8,8 +8,10 @@ import os
 
 from src.states.app_state import switch_currentstate, get_currentstate
 from src.states.stop_flag_state import get_stop_flag
-# 
-DEVICE = 18 #change this to the correct device test it with tests/testaudio.py find the device connected to VM CABLE INPUT 
+from src.services.network import get_server_url
+
+DEVICE_ENV_VAR = "ADSKIPPER_AUDIO_DEVICE"
+AUDIO_DEVICE_NAMES = ("cable output", "vb-audio")
 q = queue.Queue()
 
 
@@ -30,6 +32,38 @@ model_Dutch = vosk.Model(MODEL_PATH)
 recognizer = vosk.KaldiRecognizer(model_Dutch, 48000)
 recognizer.SetWords(True)
 
+
+def get_audio_device():
+    override = os.getenv(DEVICE_ENV_VAR)
+    if override:
+        try:
+            return int(override)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"{DEVICE_ENV_VAR} must be a device number, got {override!r}"
+            ) from exc
+
+    devices = sd.query_devices()
+    available_inputs = []
+
+    for index, device in enumerate(devices):
+        if device["max_input_channels"] <= 0:
+            continue
+
+        name = device["name"]
+        available_inputs.append(f"{index}: {name}")
+
+        if any(match in name.lower() for match in AUDIO_DEVICE_NAMES):
+            print(f"Using audio device {index}: {name}")
+            return index
+
+    raise RuntimeError(
+        "Could not find the VB-CABLE input device automatically. "
+        f"Set {DEVICE_ENV_VAR} to the device number. Available input devices: "
+        + ", ".join(available_inputs)
+    )
+
+
 #getting the status of the vm cable 
 def callback(indata, frames, time, status):
     if status:
@@ -38,11 +72,14 @@ def callback(indata, frames, time, status):
 
 
 def start_transcription():
+    server_url = get_server_url()
+    audio_device = get_audio_device()
+
     #start the listing to the vm cable 
     with sd.RawInputStream(
         samplerate=48000,
         blocksize=8000,
-        device=DEVICE,
+        device=audio_device,
         dtype="int16",
         channels=1,
         callback=callback,
@@ -57,7 +94,7 @@ def start_transcription():
             if recognizer.AcceptWaveform(data):
                 result = json.loads(recognizer.Result())
                 text = result.get("text", "").lower()
-                #print(text)
+                print(text)
                
                 if (
                     "reclame" in text or "tot zo" in text or "we zijn zo terug" in text
@@ -66,7 +103,7 @@ def start_transcription():
 
                     if not stop_flag:
                         print("switch to youtube...")
-                        requests.get("http://192.168.68.63:5000/youtube")
+                        requests.get(f"{server_url}/youtube")
                         switch_currentstate("youtube")
 
                 if (
@@ -76,5 +113,5 @@ def start_transcription():
 
                     if not stop_flag:
                         print("switch back to ziggo...")
-                        requests.get("http://192.168.68.63:5000/ziggo")
+                        requests.get(f"{server_url}/ziggo")
                         switch_currentstate("ziggo")

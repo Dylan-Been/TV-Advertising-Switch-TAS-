@@ -8,6 +8,7 @@ import pydirectinput
 import win32gui     
 from src.states.procces_status import switch_proccesstate, get_proccesstate
 from src.actions.restart import restart_program
+from src.services.network import get_server_url
 import os
 # getting the absolute path to the main directiory 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +29,7 @@ ARROW_INTERVAL = 0.25
 
 @app.route("/startup")
 def startup():
-    return render_template("startup.html")
+    return render_template("startup.html", remote_url=get_server_url())
 
 @app.route("/")
 def home():
@@ -91,25 +92,6 @@ def switch():
             switch_to_ziggo()
             switch_currentstate("ziggo")
             currentstatetrack = "ziggo"
-    return "OK"
-
-@app.route("/Scale")
-def scale():
-    if get_proccesstate() == "Clear":   
-        if currentstatetrack == "ziggo":
-            hwnd = get_window_handle("Ziggo")
-            if hwnd is None:
-                print("No Ziggo window found")
-                return False
-
-            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
-
-            # Click the icon near the top-right of Ziggo player
-            pyautogui.click(right - 100, top + 200)
-            time.sleep(0.2)
-            pyautogui.click(right - 100, top + 200)
-        else:
-            pyautogui.press("f11")
     return "OK"
 
 @app.route("/removeoverlay")
