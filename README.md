@@ -26,6 +26,7 @@ You need:
 
 - Python 3.13.3. This is the version the project was tested with.
 - Google Chrome installed at `C:\Program Files\Google\Chrome\Application\chrome.exe`.
+- Install the YouTube TV on PC Chrome extension for a better YouTube experience at `https://chromewebstore.google.com/detail/youtube-tv-on-pc/jldjbkccldgbegjpggphaeikombjmnkh`
 - Microsoft Edge installed at `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`.
 - VB-CABLE installed so streaming-app audio can be captured by the transcription service while you still hear it through your speakers.
 - The Dutch Vosk model folder `models/vosk-model-small-nl-0.22`.
