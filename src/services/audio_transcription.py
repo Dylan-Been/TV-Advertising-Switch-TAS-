@@ -11,7 +11,33 @@ from src.states.stop_flag_state import get_stop_flag
 from src.services.network import get_server_url
 
 DEVICE_ENV_VAR = "ADSKIPPER_AUDIO_DEVICE"
-AUDIO_DEVICE_NAMES = ("cable output", "vb-audio")
+
+# helper function to find the correct audio device 
+def find_audio_device():
+    # check if audio device is set in env (this can be set by running: $env:ADSKIPPER_AUDIO_DEVICE="your device number" before starting)
+    preferred = os.getenv(DEVICE_ENV_VAR)
+
+    devices = sd.query_devices()
+
+    # 1. Manual override by index
+    if preferred:
+        return int(preferred)
+
+    # 2. Auto select exact wanted device/backend
+    for i, device in enumerate(devices):
+        name = device["name"].lower()
+        hostapi = sd.query_hostapis(device["hostapi"])["name"].lower()
+
+        if (
+            "cable output" in name
+            and "vb-audio" in name
+            and "wasapi" in hostapi
+            and device["max_input_channels"] >= 2
+        ):
+            return i
+
+    raise RuntimeError("Could not find VB-Audio CABLE Output WASAPI input device")
+
 q = queue.Queue()
 
 
@@ -32,38 +58,6 @@ model_Dutch = vosk.Model(MODEL_PATH)
 recognizer = vosk.KaldiRecognizer(model_Dutch, 48000)
 recognizer.SetWords(True)
 
-
-def get_audio_device():
-    override = os.getenv(DEVICE_ENV_VAR)
-    if override:
-        try:
-            return int(override)
-        except ValueError as exc:
-            raise RuntimeError(
-                f"{DEVICE_ENV_VAR} must be a device number, got {override!r}"
-            ) from exc
-
-    devices = sd.query_devices()
-    available_inputs = []
-
-    for index, device in enumerate(devices):
-        if device["max_input_channels"] <= 0:
-            continue
-
-        name = device["name"]
-        available_inputs.append(f"{index}: {name}")
-
-        if any(match in name.lower() for match in AUDIO_DEVICE_NAMES):
-            print(f"Using audio device {index}: {name}")
-            return index
-
-    raise RuntimeError(
-        "Could not find the VB-CABLE input device automatically. "
-        f"Set {DEVICE_ENV_VAR} to the device number. Available input devices: "
-        + ", ".join(available_inputs)
-    )
-
-
 #getting the status of the vm cable 
 def callback(indata, frames, time, status):
     if status:
@@ -73,7 +67,8 @@ def callback(indata, frames, time, status):
 
 def start_transcription():
     server_url = get_server_url()
-    audio_device = get_audio_device()
+    audio_device = find_audio_device()
+    print("Using audio device:", audio_device, sd.query_devices(audio_device))
 
     #start the listing to the vm cable 
     with sd.RawInputStream(
@@ -94,7 +89,8 @@ def start_transcription():
             if recognizer.AcceptWaveform(data):
                 result = json.loads(recognizer.Result())
                 text = result.get("text", "").lower()
-                print(text)
+                #print output of transcription 
+                #print(text)
                
                 if (
                     "reclame" in text or "tot zo" in text or "we zijn zo terug" in text

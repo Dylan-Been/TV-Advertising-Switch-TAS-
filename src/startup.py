@@ -162,16 +162,7 @@ if __name__ == "__main__":
         print("remote access url:", get_server_url())
         threading.Thread(target=start_transcription, daemon=True).start()
         time.sleep(3)
-        startup_url = f"{get_server_url()}/startup"
 
-        subprocess.Popen([
-        CHROME_PATH,
-        "--kiosk",
-        startup_url,
-        "--new-window",
-        "--disable-session-crashed-bubble",
-        "--disable-infobars",
-        ])
         open_apps()
         print("Startup done")
         switch_proccesstate(False)
